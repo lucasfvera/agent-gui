@@ -1,0 +1,10 @@
+{
+  "name": "skills-manager",
+  "version": "1.0.0",
+  "description": "Local skills manager for Claude Code",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test server/**/*.test.js"
+  }
+}
