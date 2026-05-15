@@ -21,7 +21,14 @@ const CURSOR_GROUPS = [
 ];
 
 function getRootPath(rootName) {
+  if (!ROOTS.includes(rootName)) {
+    throw new Error('Invalid root');
+  }
   return path.join(HOME, rootName);
+}
+
+function isValidRoot(rootName) {
+  return ROOTS.includes(rootName);
 }
 
 function getDisabledPath(rootName, groupPath = '') {
@@ -31,6 +38,12 @@ function getDisabledPath(rootName, groupPath = '') {
     : path.join(rootPath, 'temp_disabled_skills');
 }
 
+function isSafePath(basePath, targetPath) {
+  const resolved = path.resolve(targetPath);
+  const baseResolved = path.resolve(basePath);
+  return resolved.startsWith(baseResolved);
+}
+
 module.exports = {
   HOME,
   PORT,
@@ -38,5 +51,7 @@ module.exports = {
   MIME_TYPES,
   CURSOR_GROUPS,
   getRootPath,
-  getDisabledPath
+  getDisabledPath,
+  isValidRoot,
+  isSafePath
 };

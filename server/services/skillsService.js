@@ -1,4 +1,4 @@
-const { ROOTS, CURSOR_GROUPS, getRootPath, getDisabledPath } = require('../config');
+const { ROOTS, CURSOR_GROUPS, getRootPath, getDisabledPath, isSafePath } = require('../config');
 const { parseFrontmatter } = require('./parserService');
 const fs = require('fs');
 const path = require('path');
@@ -186,6 +186,10 @@ function getSkillContent(rootName, skillPath, groupPath = '') {
   const rootPath = getRootPath(rootName);
   
   const skillName = skillPath.split('/').pop();
+
+  if (skillName.includes('..') || (groupPath && groupPath.includes('..'))) {
+    return null;
+  }
   
   const fullSkillPath = groupPath 
     ? path.join(groupPath, skillName)
@@ -195,6 +199,10 @@ function getSkillContent(rootName, skillPath, groupPath = '') {
   const disabledPath = groupPath
     ? path.join(rootPath, 'temp_disabled_skills', groupPath, skillName, 'SKILL.md')
     : path.join(rootPath, 'temp_disabled_skills', skillName, 'SKILL.md');
+
+  if (!isSafePath(rootPath, enabledPath) || !isSafePath(rootPath, disabledPath)) {
+    return null;
+  }
 
   let skillFullPath;
   if (fs.existsSync(enabledPath)) {
@@ -233,6 +241,10 @@ function toggleSkill(rootName, skillPath, groupPath = '') {
   
   const skillName = skillPath.split('/').pop();
 
+  if (skillName.includes('..') || (groupPath && groupPath.includes('..'))) {
+    return { success: false, error: 'Invalid path' };
+  }
+
   const fullEnabledPath = groupPath
     ? path.join(rootPath, groupPath, skillName)
     : path.join(rootPath, skillPath);
@@ -240,6 +252,10 @@ function toggleSkill(rootName, skillPath, groupPath = '') {
   const fullDisabledPath = groupPath
     ? path.join(disabledRoot, groupPath, skillName)
     : path.join(disabledRoot, skillName);
+
+  if (!isSafePath(rootPath, fullEnabledPath) || !isSafePath(rootPath, fullDisabledPath)) {
+    return { success: false, error: 'Invalid path' };
+  }
 
   const isCurrentlyEnabled = fs.existsSync(fullEnabledPath);
 
