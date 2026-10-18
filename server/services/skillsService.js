@@ -88,7 +88,7 @@ function getSkillContent(rootName, skillPath, groupPath = '') {
   const enabledPath = path.join(rootPath, fullSkillPath, 'SKILL.md');
   const disabledPath = groupPath
     ? path.join(rootPath, 'temp_disabled_skills', groupPath, skillName, 'SKILL.md')
-    : path.join(rootPath, 'temp_disabled_skills', skillName, 'SKILL.md');
+    : path.join(rootPath, 'temp_disabled_skills', fullSkillPath, 'SKILL.md');
 
   if (!isSafePath(rootPath, enabledPath) || !isSafePath(rootPath, disabledPath)) {
     return null;
@@ -141,7 +141,7 @@ function toggleSkill(rootName, skillPath, groupPath = '') {
 
   const fullDisabledPath = groupPath
     ? path.join(disabledRoot, groupPath, skillName)
-    : path.join(disabledRoot, skillName);
+    : path.join(disabledRoot, skillPath);
 
   if (!isSafePath(rootPath, fullEnabledPath) || !isSafePath(rootPath, fullDisabledPath)) {
     return { success: false, error: 'Invalid path' };
