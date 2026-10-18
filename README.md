@@ -41,7 +41,8 @@ server/
 ## How it works
 
 - Scans `.cursor`, `.agents`, `.codex`, `.gemini`, `.opencode`, `.warp`, `.claude` directories
-- For `.cursor`, groups skills into: skills, skills-cursor, superpowers, notion-workspace, compound-engineering
+- For `.cursor`, groups skills into: skills, skills-cursor
+- Cache/temp/vendor directories (plugins, cache, tmp, vendor_imports, node_modules, etc.) are excluded from scans
 - Disabling a skill moves its folder to `temp_disabled_skills/` at the root level
 - Skills are detected by `SKILL.md` files
 

@@ -14,11 +14,32 @@ const MIME_TYPES = {
 
 const CURSOR_GROUPS = [
   { name: 'skills', searchPath: 'skills' },
-  { name: 'skills-cursor', searchPath: 'skills-cursor' },
-  { name: 'superpowers', searchPath: 'plugins/cache/cursor-public/superpowers' },
-  { name: 'notion-workspace', searchPath: 'plugins/cache/cursor-public/notion-workspace' },
-  { name: 'compound-engineering', searchPath: 'plugins/cache/cursor-public/compound-engineering' }
+  { name: 'skills-cursor', searchPath: 'skills-cursor' }
 ];
+
+const SKIP_DIRS = new Set([
+  '.git',
+  'node_modules',
+  'cache',
+  '.cache',
+  'tmp',
+  '.tmp',
+  'plugins',
+  'extensions',
+  'vendor_imports',
+  'logs',
+  'sessions',
+  'snapshots',
+  'memories',
+  'history',
+  'state',
+  'sqlite',
+  'temp_disabled_skills'
+]);
+
+function isSkippedDir(name) {
+  return SKIP_DIRS.has(name);
+}
 
 function getRootPath(rootName) {
   if (!ROOTS.includes(rootName)) {
@@ -53,5 +74,6 @@ module.exports = {
   getRootPath,
   getDisabledPath,
   isValidRoot,
-  isSafePath
+  isSafePath,
+  isSkippedDir
 };

@@ -1,5 +1,6 @@
 const { ROOTS, CURSOR_GROUPS, getRootPath, getDisabledPath, isSafePath } = require('../config');
-const { parseFrontmatter } = require('./parserService');
+const { countSkillsInDir } = require('./helpers/countSkills');
+const { collectSkillsInDir } = require('./helpers/collectSkills');
 const fs = require('fs');
 const path = require('path');
 
@@ -7,131 +8,54 @@ function getRoots() {
   return ROOTS.map(rootName => {
     const rootPath = getRootPath(rootName);
     const exists = fs.existsSync(rootPath);
+    const disabledPath = getDisabledPath(rootName);
 
-    let skillCount = 0;
-    if (exists) {
-      skillCount = countSkillsRecursively(rootPath);
-    }
+    const enabledCount = exists ? countSkillsInDir(rootPath) : 0;
+    const disabledCount = exists ? countSkillsInDir(disabledPath) : 0;
 
     return {
       name: rootName,
       exists,
-      skillCount,
+      skillCount: enabledCount + disabledCount,
+      enabledCount,
+      disabledCount,
       hasGroups: rootName === '.cursor'
     };
   });
-}
-
-function countSkillsRecursively(rootPath) {
-  let count = 0;
-
-  function walk(dir) {
-    try {
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.name.startsWith('.')) continue;
-
-        const fullPath = path.join(dir, entry.name);
-
-        if (entry.name === 'SKILL.md') {
-          count++;
-        } else if (entry.isDirectory()) {
-          walk(fullPath);
-        }
-      }
-    } catch (e) {
-      // Ignore permission errors
-    }
-  }
-
-  walk(rootPath);
-  return count;
 }
 
 function getGroupsForCursor() {
   const rootPath = getRootPath('.cursor');
   const groups = [];
 
-  function findSkillsInDir(dir) {
-    let count = 0;
-    try {
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.name.startsWith('.')) continue;
-        const fullPath = path.join(dir, entry.name);
-        if (entry.name === 'SKILL.md') {
-          count++;
-        } else if (entry.isDirectory()) {
-          count += findSkillsInDir(fullPath);
-        }
-      }
-    } catch (e) {}
-    return count;
-  }
-
   for (const dir of CURSOR_GROUPS) {
-    const fullPath = path.join(rootPath, dir.searchPath);
-    if (fs.existsSync(fullPath)) {
-      const count = findSkillsInDir(fullPath);
-      if (count > 0) {
-        groups.push({
-          name: dir.name,
-          path: dir.searchPath,
-          skillCount: count
-        });
-      }
+    const groupPath = path.join(rootPath, dir.searchPath);
+    const disabledPath = getDisabledPath('.cursor', dir.searchPath);
+    const enabledCount = countSkillsInDir(groupPath);
+    const disabledCount = countSkillsInDir(disabledPath);
+    if (enabledCount + disabledCount > 0) {
+      groups.push({
+        name: dir.name,
+        path: dir.searchPath,
+        skillCount: enabledCount + disabledCount,
+        enabledCount,
+        disabledCount
+      });
     }
   }
 
   return groups.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function findSkillsInGroup(rootName, groupPath) {
+function findSkillsInGroup(rootName, groupPathName) {
   const rootPath = getRootPath(rootName);
-  const groupFullPath = path.join(rootPath, groupPath);
-  const disabledRoot = getDisabledPath(rootName, groupPath);
-  const skills = [];
+  const groupFullPath = path.join(rootPath, groupPathName);
+  const disabledRoot = getDisabledPath(rootName, groupPathName);
 
-  function walk(dir, relativePath = '', isEnabled = true) {
-    try {
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-
-      for (const entry of entries) {
-        if (entry.name.startsWith('.')) continue;
-
-        const fullPath = path.join(dir, entry.name);
-        const currentRelative = relativePath ? `${relativePath}/${entry.name}` : entry.name;
-
-        if (entry.name === 'SKILL.md') {
-          const skillDir = path.dirname(fullPath);
-          const folderName = path.basename(skillDir);
-
-          const content = fs.readFileSync(fullPath, 'utf-8');
-          const frontmatter = parseFrontmatter(content);
-
-          skills.push({
-            name: folderName,
-            path: currentRelative.replace('/SKILL.md', ''),
-            fullPath: fullPath,
-            enabled: isEnabled,
-            description: frontmatter.description || 'No description'
-          });
-        } else if (entry.isDirectory()) {
-          walk(fullPath, currentRelative, isEnabled);
-        }
-      }
-    } catch (e) {
-      // Ignore permission errors
-    }
-  }
-
-  if (fs.existsSync(groupFullPath)) {
-    walk(groupFullPath, '', true);
-  }
-
-  if (fs.existsSync(disabledRoot)) {
-    walk(disabledRoot, '', false);
-  }
+  const skills = [
+    ...collectSkillsInDir(groupFullPath, true),
+    ...collectSkillsInDir(disabledRoot, false)
+  ];
 
   return skills.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -139,45 +63,11 @@ function findSkillsInGroup(rootName, groupPath) {
 function findSkillsRecursively(rootName) {
   const rootPath = getRootPath(rootName);
   const disabledRoot = getDisabledPath(rootName);
-  const skills = [];
 
-  function walk(dir, relativePath = '', isEnabled = true) {
-    try {
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-
-      for (const entry of entries) {
-        if (entry.name.startsWith('.')) continue;
-
-        const fullPath = path.join(dir, entry.name);
-        const currentRelative = relativePath ? `${relativePath}/${entry.name}` : entry.name;
-
-        if (entry.name === 'SKILL.md') {
-          const skillDir = path.dirname(fullPath);
-          const folderName = path.basename(skillDir);
-
-          const content = fs.readFileSync(fullPath, 'utf-8');
-          const frontmatter = parseFrontmatter(content);
-
-          skills.push({
-            name: folderName,
-            path: currentRelative.replace('/SKILL.md', ''),
-            fullPath: fullPath,
-            enabled: isEnabled,
-            description: frontmatter.description || 'No description'
-          });
-        } else if (entry.isDirectory()) {
-          walk(fullPath, currentRelative, isEnabled);
-        }
-      }
-    } catch (e) {
-      // Ignore permission errors
-    }
-  }
-
-  walk(rootPath, '', true);
-  if (fs.existsSync(disabledRoot)) {
-    walk(disabledRoot, '', false);
-  }
+  const skills = [
+    ...collectSkillsInDir(rootPath, true),
+    ...collectSkillsInDir(disabledRoot, false)
+  ];
 
   return skills.sort((a, b) => a.name.localeCompare(b.path));
 }
