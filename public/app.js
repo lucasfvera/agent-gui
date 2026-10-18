@@ -9,12 +9,15 @@ async function loadRoots() {
 
   const list = document.getElementById('rootsList');
   list.innerHTML = roots.map(root => `
-    <div class="root-item ${root.skillCount === 0 ? 'disabled' : ''}"
+    <div class="root-item ${root.skillCount === 0 ? 'disabled' : ''} ${root.name === currentRoot ? 'active' : ''}"
          data-name="${root.name}"
          data-has-groups="${root.hasGroups || false}"
          ${root.skillCount === 0 ? '' : `onclick="selectRoot('${root.name}')"`}>
       <span class="name">${root.name}</span>
-      <span class="count">${root.skillCount}</span>
+      <div class="root-meta">
+        <span class="breakdown">${root.enabledCount} enabled · ${root.disabledCount} disabled</span>
+        <span class="count">${root.skillCount}</span>
+      </div>
     </div>
   `).join('');
 }
@@ -38,8 +41,7 @@ async function selectRoot(rootName) {
     const groupsRes = await fetch(`/api/groups/${rootName}`);
     const groups = await groupsRes.json();
     currentGroups = groups;
-
-    document.getElementById('rootSubtitle').textContent = `${groups.length} group${groups.length !== 1 ? 's' : ''}`;
+    updateSubtitle();
 
     if (groups.length === 0) {
       document.getElementById('contentBody').innerHTML = `
@@ -54,7 +56,7 @@ async function selectRoot(rootName) {
           <span class="arrow">▶</span>
           <div class="info">
             <div class="skill-name">${group.name}</div>
-            <div class="skill-count">${group.skillCount} skills</div>
+            <div class="skill-count">${formatSkillCounts(group.skillCount, group.enabledCount, group.disabledCount)}</div>
           </div>
         </div>
         <div class="accordion-content" id="group-content-${groupIndex}">
@@ -68,7 +70,8 @@ async function selectRoot(rootName) {
     const res = await fetch(`/api/skills?root=${rootName}`);
     const skills = await res.json();
 
-    document.getElementById('rootSubtitle').textContent = `${skills.length} skill${skills.length !== 1 ? 's' : ''}`;
+    currentSkillsCache['flat'] = skills;
+    updateSubtitle();
 
     if (skills.length === 0) {
       document.getElementById('contentBody').innerHTML = `
@@ -76,8 +79,6 @@ async function selectRoot(rootName) {
       `;
       return;
     }
-
-    currentSkillsCache['flat'] = skills;
 
     const listHtml = skills.map((skill, index) => `
       <div class="accordion" data-index="flat-${index}">
@@ -223,6 +224,7 @@ async function toggleSkillEnabled(cacheKey, index, currentEnabled) {
       if (checkbox) {
         checkbox.checked = result.enabled;
       }
+      updateCounts(cacheKey);
     } else {
       console.error('Failed to toggle skill:', result.error);
     }
@@ -245,6 +247,52 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+function formatSkillCounts(total, enabled, disabled) {
+  const word = total === 1 ? 'skill' : 'skills';
+  return `${total} ${word} · ${enabled} enabled · ${disabled} disabled`;
+}
+
+function updateSubtitle() {
+  const el = document.getElementById('rootSubtitle');
+  if (!el) return;
+
+  if (currentRoot === '.cursor' && currentGroups) {
+    const total = currentGroups.reduce((sum, g) => sum + g.enabledCount + g.disabledCount, 0);
+    const enabled = currentGroups.reduce((sum, g) => sum + g.enabledCount, 0);
+    el.textContent = `${currentGroups.length} group${currentGroups.length !== 1 ? 's' : ''} · ${formatSkillCounts(total, enabled, total - enabled)}`;
+  } else if (currentRoot && currentSkillsCache['flat']) {
+    const skills = currentSkillsCache['flat'];
+    const enabled = skills.filter(s => s.enabled).length;
+    el.textContent = formatSkillCounts(skills.length, enabled, skills.length - enabled);
+  } else if (currentRoot) {
+    el.textContent = `0 skills · 0 enabled · 0 disabled`;
+  }
+}
+
+function updateCounts(cacheKey) {
+  const skills = currentSkillsCache[cacheKey];
+  if (!skills) return;
+
+  const enabled = skills.filter(s => s.enabled).length;
+  const disabled = skills.length - enabled;
+
+  if (currentRoot === '.cursor' && cacheKey.startsWith('group-')) {
+    const groupIndex = cacheKey.split('-')[1];
+    const group = currentGroups && currentGroups[groupIndex];
+    if (group) {
+      group.enabledCount = enabled;
+      group.disabledCount = disabled;
+      const header = document.querySelector(`[data-group-index="${groupIndex}"] .skill-count`);
+      if (header) {
+        header.textContent = formatSkillCounts(skills.length, enabled, disabled);
+      }
+    }
+  }
+
+  updateSubtitle();
+  loadRoots();
 }
 
 loadRoots();
