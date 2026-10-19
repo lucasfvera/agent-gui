@@ -381,6 +381,7 @@ function updateCounts(cacheKey) {
 async function init() {
   await loadRoots();
   await restoreState();
+  syncUrlState();
 }
 
 init();
