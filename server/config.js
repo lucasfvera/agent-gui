@@ -62,7 +62,7 @@ function getDisabledPath(rootName, groupPath = '') {
 function isSafePath(basePath, targetPath) {
   const resolved = path.resolve(targetPath);
   const baseResolved = path.resolve(basePath);
-  return resolved.startsWith(baseResolved);
+  return resolved === baseResolved || resolved.startsWith(baseResolved + path.sep);
 }
 
 module.exports = {
