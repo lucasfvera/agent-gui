@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "external_directory": {
+      "*": "deny",
+      "~/.opencode/skills/**": "allow",
+      "~/.config/opencode/**": "allow",
+      "~/.agents/skills/**": "allow",
+      "~/.cursor/worktrees/**": "allow"
+    },
+    "edit": {
+      "**/.opencode/skills/**": "deny",
+      "**/.config/opencode/**": "deny",
+      "**/.agents/skills/**": "deny"
+    }
+  }
+}
