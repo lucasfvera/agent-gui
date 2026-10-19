@@ -12,10 +12,20 @@ const MIME_TYPES = {
   '.json': 'application/json'
 };
 
-const CURSOR_GROUPS = [
-  { name: 'skills', searchPath: 'skills' },
-  { name: 'skills-cursor', searchPath: 'skills-cursor' }
-];
+const ROOT_GROUPS = {
+  '.cursor': [
+    { name: 'skills', searchPath: 'skills' },
+    { name: 'skills-cursor', searchPath: 'skills-cursor' }
+  ]
+};
+
+function hasGroups(rootName) {
+  return Boolean(ROOT_GROUPS[rootName]);
+}
+
+function getGroupsFor(rootName) {
+  return ROOT_GROUPS[rootName] || null;
+}
 
 const SKIP_DIRS = new Set([
   '.git',
@@ -70,10 +80,11 @@ module.exports = {
   PORT,
   ROOTS,
   MIME_TYPES,
-  CURSOR_GROUPS,
   getRootPath,
   getDisabledPath,
   isValidRoot,
   isSafePath,
-  isSkippedDir
+  isSkippedDir,
+  hasGroups,
+  getGroupsFor
 };

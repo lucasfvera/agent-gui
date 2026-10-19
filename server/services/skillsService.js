@@ -1,4 +1,4 @@
-const { ROOTS, CURSOR_GROUPS, getRootPath, getDisabledPath, isSafePath } = require('../config');
+const { ROOTS, getRootPath, getDisabledPath, isSafePath, hasGroups, getGroupsFor } = require('../config');
 const { countSkillsInDir } = require('./helpers/countSkills');
 const { collectSkillsInDir } = require('./helpers/collectSkills');
 const fs = require('fs');
@@ -19,18 +19,23 @@ function getRoots() {
       skillCount: enabledCount + disabledCount,
       enabledCount,
       disabledCount,
-      hasGroups: rootName === '.cursor'
+      hasGroups: hasGroups(rootName)
     };
   });
 }
 
-function getGroupsForCursor() {
-  const rootPath = getRootPath('.cursor');
+function getGroupsForRoot(rootName) {
+  const rootPath = getRootPath(rootName);
+  const groupDefs = getGroupsFor(rootName);
   const groups = [];
 
-  for (const dir of CURSOR_GROUPS) {
+  if (!groupDefs) {
+    return groups;
+  }
+
+  for (const dir of groupDefs) {
     const groupPath = path.join(rootPath, dir.searchPath);
-    const disabledPath = getDisabledPath('.cursor', dir.searchPath);
+    const disabledPath = getDisabledPath(rootName, dir.searchPath);
     const enabledCount = countSkillsInDir(groupPath);
     const disabledCount = countSkillsInDir(disabledPath);
     if (enabledCount + disabledCount > 0) {
@@ -167,7 +172,7 @@ function toggleSkill(rootName, skillPath, groupPath = '') {
 
 module.exports = {
   getRoots,
-  getGroupsForCursor,
+  getGroupsForRoot,
   findSkillsInGroup,
   findSkillsRecursively,
   getSkillContent,
