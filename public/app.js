@@ -26,84 +26,88 @@ async function selectRoot(rootName) {
   if (isLoading) return;
   isLoading = true;
 
-  document.getElementById('contentBody').innerHTML = '<div class="empty-state">Loading...</div>';
+  try {
+    document.getElementById('contentBody').innerHTML = '<div class="empty-state">Loading...</div>';
 
-  document.querySelectorAll('.root-item').forEach(el => el.classList.remove('active'));
-  document.querySelector(`[data-name="${rootName}"]`).classList.add('active');
+    document.querySelectorAll('.root-item').forEach(el => el.classList.remove('active'));
+    document.querySelector(`[data-name="${CSS.escape(rootName)}"]`).classList.add('active');
 
-  currentRoot = rootName;
-  currentSkillsCache = {};
-  document.getElementById('rootTitle').textContent = rootName;
+    currentRoot = rootName;
+    currentSkillsCache = {};
+    document.getElementById('rootTitle').textContent = rootName;
 
-  const isCursor = rootName === '.cursor';
+    const isCursor = rootName === '.cursor';
 
-  if (isCursor) {
-    const groupsRes = await fetch(`/api/groups/${rootName}`);
-    const groups = await groupsRes.json();
-    currentGroups = groups;
-    updateSubtitle();
+    if (isCursor) {
+      const groupsRes = await fetch(`/api/groups/${rootName}`);
+      const groups = await groupsRes.json();
+      currentGroups = groups;
+      updateSubtitle();
 
-    if (groups.length === 0) {
-      document.getElementById('contentBody').innerHTML = `
-        <div class="empty-state">No skill groups found in ${rootName}</div>
-      `;
-      return;
-    }
+      if (groups.length === 0) {
+        document.getElementById('contentBody').innerHTML = `
+          <div class="empty-state">No skill groups found in ${rootName}</div>
+        `;
+        return;
+      }
 
-    const groupsHtml = groups.map((group, groupIndex) => `
-      <div class="accordion group-accordion" data-group-index="${groupIndex}">
-        <div class="accordion-header" onclick="toggleGroup(${groupIndex})">
-          <span class="arrow">▶</span>
-          <div class="info">
-            <div class="skill-name">${group.name}</div>
-            <div class="skill-count">${formatSkillCounts(group.skillCount, group.enabledCount, group.disabledCount)}</div>
+      const groupsHtml = groups.map((group, groupIndex) => `
+        <div class="accordion group-accordion" data-group-index="${groupIndex}">
+          <div class="accordion-header" onclick="toggleGroup(${groupIndex})">
+            <span class="arrow">▶</span>
+            <div class="info">
+              <div class="skill-name">${group.name}</div>
+              <div class="skill-count">${formatSkillCounts(group.skillCount, group.enabledCount, group.disabledCount)}</div>
+            </div>
+          </div>
+          <div class="accordion-content" id="group-content-${groupIndex}">
+            <div class="group-skills-placeholder">Loading...</div>
           </div>
         </div>
-        <div class="accordion-content" id="group-content-${groupIndex}">
-          <div class="group-skills-placeholder">Loading...</div>
-        </div>
-      </div>
-    `).join('');
+      `).join('');
 
-    document.getElementById('contentBody').innerHTML = groupsHtml;
-  } else {
-    const res = await fetch(`/api/skills?root=${rootName}`);
-    const skills = await res.json();
+      document.getElementById('contentBody').innerHTML = groupsHtml;
+    } else {
+      const res = await fetch(`/api/skills?root=${rootName}`);
+      const skills = await res.json();
 
-    currentSkillsCache['flat'] = skills;
-    updateSubtitle();
+      currentSkillsCache['flat'] = skills;
+      updateSubtitle();
 
-    if (skills.length === 0) {
-      document.getElementById('contentBody').innerHTML = `
-        <div class="empty-state">No skills found in ${rootName}</div>
-      `;
-      return;
-    }
+      if (skills.length === 0) {
+        document.getElementById('contentBody').innerHTML = `
+          <div class="empty-state">No skills found in ${rootName}</div>
+        `;
+        return;
+      }
 
-    const listHtml = skills.map((skill, index) => `
-      <div class="accordion" data-index="flat-${index}">
-        <div class="accordion-header" onclick="toggleSkill('flat', ${index})">
-          <span class="arrow">▶</span>
-          <div class="info">
-            <div class="skill-name">${skill.name}</div>
-            <div class="skill-path">${skill.path}</div>
+      const listHtml = skills.map((skill, index) => `
+        <div class="accordion" data-index="flat-${index}">
+          <div class="accordion-header" onclick="toggleSkill('flat', ${index})">
+            <span class="arrow">▶</span>
+            <div class="info">
+              <div class="skill-name">${skill.name}</div>
+              <div class="skill-path">${skill.path}</div>
+            </div>
+            <label class="toggle-switch" onclick="event.stopPropagation()">
+              <input type="checkbox" ${skill.enabled ? 'checked' : ''} 
+                     onchange="toggleSkillEnabled(event, 'flat', ${index})">
+              <span class="toggle-slider"></span>
+            </label>
           </div>
-          <label class="toggle-switch" onclick="event.stopPropagation()">
-            <input type="checkbox" ${skill.enabled ? 'checked' : ''} 
-                   onchange="toggleSkillEnabled(event, 'flat', ${index})">
-            <span class="toggle-slider"></span>
-          </label>
+          <div class="accordion-content">
+            <div class="skill-description">${escapeHtml(skill.description)}</div>
+            <div class="skill-content" id="content-flat-${index}"></div>
+          </div>
         </div>
-        <div class="accordion-content">
-          <div class="skill-description">${escapeHtml(skill.description)}</div>
-          <div class="skill-content" id="content-flat-${index}"></div>
-        </div>
-      </div>
-    `).join('');
+      `).join('');
 
-    document.getElementById('contentBody').innerHTML = listHtml;
+      document.getElementById('contentBody').innerHTML = listHtml;
+    }
+  } finally {
+    isLoading = false;
+    syncUrlState();
   }
-  isLoading = false;
 }
 
 async function toggleGroup(groupIndex) {
@@ -112,8 +116,10 @@ async function toggleGroup(groupIndex) {
 
   if (isOpen) {
     groupAccordion.classList.remove('open');
+    syncUrlState();
   } else {
     groupAccordion.classList.add('open');
+    syncUrlState();
 
     const contentDiv = document.getElementById(`group-content-${groupIndex}`);
     const placeholder = contentDiv.querySelector('.group-skills-placeholder');
@@ -157,8 +163,10 @@ async function toggleSkill(cacheKey, index) {
 
   if (isOpen) {
     accordion.classList.remove('open');
+    syncUrlState();
   } else {
     accordion.classList.add('open');
+    syncUrlState();
 
     const contentDiv = document.getElementById(`content-${cacheKey}-${index}`);
     if (contentDiv.innerHTML === '') {
@@ -243,6 +251,81 @@ function getGroupPath(cacheKey) {
   return '';
 }
 
+function syncUrlState() {
+  const params = new URLSearchParams();
+
+  if (currentRoot) {
+    params.set('root', currentRoot);
+  }
+
+  const openSkill = [...document.querySelectorAll('[data-index].open')].find(el => {
+    const group = el.closest('.group-accordion');
+    return !group || group.classList.contains('open');
+  });
+
+  const groupEl = (openSkill && openSkill.closest('.group-accordion')) ||
+    document.querySelector('.group-accordion.open');
+
+  if (groupEl && currentGroups) {
+    const group = currentGroups[Number(groupEl.dataset.groupIndex)];
+    if (group) {
+      params.set('group', group.path);
+    }
+  }
+
+  if (openSkill) {
+    const raw = openSkill.dataset.index;
+    const cut = raw.lastIndexOf('-');
+    const skills = currentSkillsCache[raw.slice(0, cut)];
+    const skill = skills && skills[Number(raw.slice(cut + 1))];
+    if (skill) {
+      params.set('skill', skill.path);
+    }
+  }
+
+  const query = params.toString();
+  history.replaceState(null, '', query ? `?${query}` : location.pathname);
+}
+
+function getSavedUrlState() {
+  const params = new URLSearchParams(location.search);
+  return {
+    root: params.get('root'),
+    group: params.get('group'),
+    skill: params.get('skill')
+  };
+}
+
+async function restoreState() {
+  const { root, group, skill } = getSavedUrlState();
+  if (!root) return;
+
+  const rootEl = document.querySelector(`[data-name="${CSS.escape(root)}"]`);
+  if (!rootEl || rootEl.classList.contains('disabled')) return;
+
+  await selectRoot(root);
+
+  if (currentRoot === '.cursor' && group) {
+    const groupIndex = currentGroups ? currentGroups.findIndex(g => g.path === group) : -1;
+    if (groupIndex === -1) return;
+
+    await toggleGroup(groupIndex);
+
+    if (skill) {
+      const skills = currentSkillsCache[`group-${groupIndex}`] || [];
+      const skillIndex = skills.findIndex(s => s.path === skill);
+      if (skillIndex !== -1) {
+        await toggleSkill(`group-${groupIndex}`, skillIndex);
+      }
+    }
+  } else if (skill && currentSkillsCache['flat']) {
+    const skillIndex = currentSkillsCache['flat'].findIndex(s => s.path === skill);
+    if (skillIndex !== -1) {
+      await toggleSkill('flat', skillIndex);
+    }
+  }
+}
+
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
@@ -295,4 +378,9 @@ function updateCounts(cacheKey) {
   loadRoots();
 }
 
-loadRoots();
+async function init() {
+  await loadRoots();
+  await restoreState();
+}
+
+init();
