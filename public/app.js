@@ -258,30 +258,36 @@ function syncUrlState() {
     params.set('root', currentRoot);
   }
 
-  const openSkill = [...document.querySelectorAll('[data-index].open')].find(el => {
+  const openGroups = [...document.querySelectorAll('.group-accordion.open')];
+  const openSkills = [...document.querySelectorAll('[data-index].open')].filter(el => {
     const group = el.closest('.group-accordion');
     return !group || group.classList.contains('open');
   });
 
-  const groupEl = (openSkill && openSkill.closest('.group-accordion')) ||
-    document.querySelector('.group-accordion.open');
-
-  if (groupEl && currentGroups) {
-    const group = currentGroups[Number(groupEl.dataset.groupIndex)];
+  openGroups.forEach(groupEl => {
+    const group = currentGroups && currentGroups[Number(groupEl.dataset.groupIndex)];
     if (group) {
-      params.set('group', group.path);
+      params.append('group', group.path);
     }
-  }
+  });
 
-  if (openSkill) {
-    const raw = openSkill.dataset.index;
+  openSkills.forEach(el => {
+    const raw = el.dataset.index;
     const cut = raw.lastIndexOf('-');
     const skills = currentSkillsCache[raw.slice(0, cut)];
     const skill = skills && skills[Number(raw.slice(cut + 1))];
-    if (skill) {
-      params.set('skill', skill.path);
+    if (!skill) return;
+
+    const parentGroup = el.closest('.group-accordion');
+    if (parentGroup) {
+      const urlGroupIndex = openGroups.indexOf(parentGroup);
+      if (urlGroupIndex !== -1) {
+        params.append('skill', `${urlGroupIndex}:${skill.path}`);
+      }
+    } else {
+      params.append('skill', skill.path);
     }
-  }
+  });
 
   const query = params.toString();
   history.replaceState(null, '', query ? `?${query}` : location.pathname);
@@ -291,13 +297,13 @@ function getSavedUrlState() {
   const params = new URLSearchParams(location.search);
   return {
     root: params.get('root'),
-    group: params.get('group'),
-    skill: params.get('skill')
+    groups: params.getAll('group'),
+    skills: params.getAll('skill')
   };
 }
 
 async function restoreState() {
-  const { root, group, skill } = getSavedUrlState();
+  const { root, groups, skills } = getSavedUrlState();
   if (!root) return;
 
   const rootEl = document.querySelector(`[data-name="${CSS.escape(root)}"]`);
@@ -305,23 +311,31 @@ async function restoreState() {
 
   await selectRoot(root);
 
-  if (currentRoot === '.cursor' && group) {
-    const groupIndex = currentGroups ? currentGroups.findIndex(g => g.path === group) : -1;
-    if (groupIndex === -1) return;
-
+  const restoredGroups = [];
+  for (const groupPath of groups) {
+    const groupIndex = currentGroups ? currentGroups.findIndex(g => g.path === groupPath) : -1;
+    restoredGroups.push(groupIndex);
+    if (groupIndex === -1) continue;
     await toggleGroup(groupIndex);
+  }
 
-    if (skill) {
-      const skills = currentSkillsCache[`group-${groupIndex}`] || [];
-      const skillIndex = skills.findIndex(s => s.path === skill);
-      if (skillIndex !== -1) {
-        await toggleSkill(`group-${groupIndex}`, skillIndex);
-      }
+  for (const skillParam of skills) {
+    const colon = skillParam.indexOf(':');
+    const grouped = colon !== -1 && groups.length > 0;
+    const urlGroupIndex = grouped ? Number(skillParam.slice(0, colon)) : -1;
+    const skillPath = grouped ? skillParam.slice(colon + 1) : skillParam;
+
+    let cacheKey = 'flat';
+    if (grouped) {
+      const groupIndex = restoredGroups[urlGroupIndex];
+      if (groupIndex === undefined || groupIndex === -1) continue;
+      cacheKey = `group-${groupIndex}`;
     }
-  } else if (skill && currentSkillsCache['flat']) {
-    const skillIndex = currentSkillsCache['flat'].findIndex(s => s.path === skill);
+
+    const cached = currentSkillsCache[cacheKey] || [];
+    const skillIndex = cached.findIndex(s => s.path === skillPath);
     if (skillIndex !== -1) {
-      await toggleSkill('flat', skillIndex);
+      await toggleSkill(cacheKey, skillIndex);
     }
   }
 }
