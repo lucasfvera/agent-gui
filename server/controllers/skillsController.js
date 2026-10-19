@@ -1,5 +1,6 @@
 const { getRoots, findSkillsInGroup, findSkillsRecursively } = require('../services/skillsService');
 const { logStart, logEnd } = require('../utils/logger');
+const { hasGroups } = require('../config');
 
 function handleSkills(req, res, { root, group }) {
   logStart('GET', '/api/skills', { root, group: group || '' });
@@ -22,7 +23,7 @@ function handleSkills(req, res, { root, group }) {
   }
 
   let skills;
-  if (root === '.cursor' && group) {
+  if (root && hasGroups(root) && group) {
     skills = findSkillsInGroup(root, group);
   } else {
     skills = findSkillsRecursively(root);

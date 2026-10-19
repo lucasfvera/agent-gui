@@ -2,6 +2,7 @@ let currentRoot = null;
 let currentGroups = null;
 let currentSkillsCache = {};
 let isLoading = false;
+let currentRootHasGroups = false;
 
 async function loadRoots() {
   const res = await fetch('/api/roots');
@@ -34,9 +35,10 @@ async function selectRoot(rootName) {
 
     currentRoot = rootName;
     currentSkillsCache = {};
+    currentRootHasGroups = document.querySelector(`[data-name="${CSS.escape(rootName)}"]`)?.dataset.hasGroups === 'true';
     document.getElementById('rootTitle').textContent = rootName;
 
-    const isCursor = rootName === '.cursor';
+    const isCursor = currentRootHasGroups;
 
     if (isCursor) {
       const groupsRes = await fetch(`/api/groups/${rootName}`);
@@ -175,7 +177,7 @@ async function toggleSkill(cacheKey, index) {
 
       if (skill) {
         let groupParam = '';
-        if (currentRoot === '.cursor' && cacheKey.startsWith('group-')) {
+        if (currentRootHasGroups && cacheKey.startsWith('group-')) {
           const groupIndex = cacheKey.split('-')[1];
           if (currentGroups && currentGroups[groupIndex]) {
             groupParam = `?group=${encodeURIComponent(currentGroups[groupIndex].path)}`;
@@ -242,7 +244,7 @@ async function toggleSkillEnabled(event, cacheKey, index) {
 }
 
 function getGroupPath(cacheKey) {
-  if (currentRoot === '.cursor' && cacheKey.startsWith('group-')) {
+  if (currentRootHasGroups && cacheKey.startsWith('group-')) {
     const groupIndex = cacheKey.split('-')[1];
     if (currentGroups && currentGroups[groupIndex]) {
       return currentGroups[groupIndex].path;
@@ -355,7 +357,7 @@ function updateSubtitle() {
   const el = document.getElementById('rootSubtitle');
   if (!el) return;
 
-  if (currentRoot === '.cursor' && currentGroups) {
+  if (currentRootHasGroups && currentGroups) {
     const total = currentGroups.reduce((sum, g) => sum + g.enabledCount + g.disabledCount, 0);
     const enabled = currentGroups.reduce((sum, g) => sum + g.enabledCount, 0);
     el.textContent = `${currentGroups.length} group${currentGroups.length !== 1 ? 's' : ''} · ${formatSkillCounts(total, enabled, total - enabled)}`;
@@ -375,7 +377,7 @@ function updateCounts(cacheKey) {
   const enabled = skills.filter(s => s.enabled).length;
   const disabled = skills.length - enabled;
 
-  if (currentRoot === '.cursor' && cacheKey.startsWith('group-')) {
+  if (currentRootHasGroups && cacheKey.startsWith('group-')) {
     const groupIndex = cacheKey.split('-')[1];
     const group = currentGroups && currentGroups[groupIndex];
     if (group) {
