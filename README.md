@@ -10,6 +10,8 @@ npm start
 
 Server runs at `http://localhost:3000`
 
+![Skills Manager UI](./skills-manager.png)
+
 ## Test
 
 ```bash
