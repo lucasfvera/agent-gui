@@ -210,32 +210,26 @@ async function toggleSkillEnabled(event, cacheKey, index) {
 
   const checkbox = document.querySelector(`[data-index="${cacheKey}-${index}"] input[type="checkbox"]`);
   const groupPath = getGroupPath(cacheKey);
-  const fullPath = groupPath ? `${groupPath}/${skill.path}` : skill.path;
   const groupParam = groupPath ? `?group=${encodeURIComponent(groupPath)}` : '';
 
   try {
-    const res = await fetch(`/api/skill/toggle/${currentRoot}/${fullPath}${groupParam}`, {
+    const res = await fetch(`/api/skill/toggle/${currentRoot}/${skill.path}${groupParam}`, {
       method: 'POST'
     });
     const result = await res.json();
 
     if (result.success) {
       skill.enabled = result.enabled;
-      if (checkbox) {
-        checkbox.checked = result.enabled;
-      }
       updateCounts(cacheKey);
     } else {
-      if (checkbox) {
-        checkbox.checked = skill.enabled;
-      }
       console.error('Failed to toggle skill:', result.error);
     }
   } catch (e) {
-    if (checkbox) {
-      checkbox.checked = skill.enabled;
-    }
     console.error('Error toggling skill:', e);
+  }
+
+  if (checkbox) {
+    checkbox.checked = skill.enabled;
   }
 }
 

@@ -108,25 +108,25 @@ describe('toggleSkill — flat skills', () => {
 });
 
 describe('toggleSkill — .cursor group skills', () => {
-  test('disables and re-enables a top-level group skill (group-prefixed path)', () => {
+  test('disables and re-enables a top-level group skill (group-relative path)', () => {
     writeSkill('.cursor', 'skills', 'group-top');
 
-    let result = toggleSkill('.cursor', 'skills/group-top', 'skills');
+    let result = toggleSkill('.cursor', 'group-top', 'skills');
     assert.strictEqual(result.success, true, JSON.stringify(result));
     assert.strictEqual(result.enabled, false);
     assert.ok(skillExists('.cursor', 'temp_disabled_skills', 'skills', 'group-top'));
     assert.strictEqual(skillExists('.cursor', 'skills', 'group-top'), false);
 
-    result = toggleSkill('.cursor', 'skills/group-top', 'skills');
+    result = toggleSkill('.cursor', 'group-top', 'skills');
     assert.strictEqual(result.success, true, JSON.stringify(result));
     assert.strictEqual(result.enabled, true);
     assert.ok(skillExists('.cursor', 'skills', 'group-top'));
   });
 
-  test('disables and re-enables a nested group skill (group-prefixed path)', () => {
+  test('disables and re-enables a nested group skill (group-relative path)', () => {
     writeSkill('.cursor', 'skills', 'nested', 'group-nested');
 
-    let result = toggleSkill('.cursor', 'skills/nested/group-nested', 'skills');
+    let result = toggleSkill('.cursor', 'nested/group-nested', 'skills');
     assert.strictEqual(result.success, true, JSON.stringify(result));
     assert.strictEqual(result.enabled, false);
     assert.ok(skillExists('.cursor', 'temp_disabled_skills', 'skills', 'nested', 'group-nested'));
@@ -135,36 +135,35 @@ describe('toggleSkill — .cursor group skills', () => {
     const disabledContent = getSkillContent('.cursor', 'nested/group-nested', 'skills');
     assert.ok(disabledContent, 'content readable while disabled');
 
-    result = toggleSkill('.cursor', 'skills/nested/group-nested', 'skills');
+    result = toggleSkill('.cursor', 'nested/group-nested', 'skills');
     assert.strictEqual(result.success, true, JSON.stringify(result));
     assert.strictEqual(result.enabled, true);
     assert.ok(skillExists('.cursor', 'skills', 'nested', 'group-nested'));
   });
 
-  test('accepts a group-relative path without the group prefix', () => {
-    writeSkill('.cursor', 'skills', 'nested', 'group-rel');
+  test('resolves skill names that collide with the group name', () => {
+    writeSkill('.cursor', 'skills', 'skills', 'colliding');
 
-    let result = toggleSkill('.cursor', 'nested/group-rel', 'skills');
+    const result = toggleSkill('.cursor', 'skills/colliding', 'skills');
     assert.strictEqual(result.success, true, JSON.stringify(result));
-    assert.ok(skillExists('.cursor', 'temp_disabled_skills', 'skills', 'nested', 'group-rel'));
+    assert.ok(skillExists('.cursor', 'temp_disabled_skills', 'skills', 'skills', 'colliding'));
 
-    result = toggleSkill('.cursor', 'nested/group-rel', 'skills');
-    assert.strictEqual(result.success, true, JSON.stringify(result));
-    assert.ok(skillExists('.cursor', 'skills', 'nested', 'group-rel'));
+    const restore = toggleSkill('.cursor', 'skills/colliding', 'skills');
+    assert.strictEqual(restore.success, true, JSON.stringify(restore));
   });
 });
 
 describe('listing reflects enabled state', () => {
   test('findSkillsInGroup marks disabled skills enabled: false', () => {
     writeSkill('.cursor', 'skills', 'listed-skill');
-    toggleSkill('.cursor', 'skills/listed-skill', 'skills');
+    toggleSkill('.cursor', 'listed-skill', 'skills');
 
     const listed = findSkillsInGroup('.cursor', 'skills');
     const skill = listed.find(s => s.name === 'listed-skill');
     assert.ok(skill);
     assert.strictEqual(skill.enabled, false);
 
-    toggleSkill('.cursor', 'skills/listed-skill', 'skills');
+    toggleSkill('.cursor', 'listed-skill', 'skills');
   });
 
   test('findSkillsRecursively marks disabled nested skills enabled: false', () => {

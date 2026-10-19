@@ -69,7 +69,7 @@ function findSkillsRecursively(rootName) {
     ...collectSkillsInDir(disabledRoot, false)
   ];
 
-  return skills.sort((a, b) => a.name.localeCompare(b.path));
+  return skills.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function getSkillContent(rootName, skillPath, groupPath = '') {
@@ -125,22 +125,17 @@ function toggleSkill(rootName, skillPath, groupPath = '') {
   const rootPath = getRootPath(rootName);
   const disabledRoot = getDisabledPath(rootName);
 
-  let relativePath = skillPath;
-  if (groupPath && relativePath.startsWith(`${groupPath}/`)) {
-    relativePath = relativePath.slice(groupPath.length + 1);
-  }
-
-  if (!relativePath || relativePath.includes('..') || (groupPath && groupPath.includes('..'))) {
+  if (!skillPath || skillPath.includes('..') || (groupPath && groupPath.includes('..'))) {
     return { success: false, error: 'Invalid path' };
   }
 
   const fullEnabledPath = groupPath
-    ? path.join(rootPath, groupPath, relativePath)
-    : path.join(rootPath, relativePath);
+    ? path.join(rootPath, groupPath, skillPath)
+    : path.join(rootPath, skillPath);
 
   const fullDisabledPath = groupPath
-    ? path.join(disabledRoot, groupPath, relativePath)
-    : path.join(disabledRoot, relativePath);
+    ? path.join(disabledRoot, groupPath, skillPath)
+    : path.join(disabledRoot, skillPath);
 
   if (!isSafePath(rootPath, fullEnabledPath) || !isSafePath(rootPath, fullDisabledPath)) {
     return { success: false, error: 'Invalid path' };
