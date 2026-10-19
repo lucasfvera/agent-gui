@@ -90,7 +90,7 @@ async function selectRoot(rootName) {
           </div>
           <label class="toggle-switch" onclick="event.stopPropagation()">
             <input type="checkbox" ${skill.enabled ? 'checked' : ''} 
-                   onchange="toggleSkillEnabled('flat', ${index}, ${skill.enabled})">
+                   onchange="toggleSkillEnabled(event, 'flat', ${index})">
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -135,7 +135,7 @@ async function toggleGroup(groupIndex) {
             </div>
             <label class="toggle-switch" onclick="event.stopPropagation()">
               <input type="checkbox" ${skill.enabled ? 'checked' : ''} 
-                     onchange="toggleSkillEnabled('group-${groupIndex}', ${skillIndex}, ${skill.enabled})">
+                     onchange="toggleSkillEnabled(event, 'group-${groupIndex}', ${skillIndex})">
               <span class="toggle-slider"></span>
             </label>
           </div>
@@ -200,7 +200,7 @@ async function toggleSkill(cacheKey, index) {
   }
 }
 
-async function toggleSkillEnabled(cacheKey, index, currentEnabled) {
+async function toggleSkillEnabled(event, cacheKey, index) {
   event.stopPropagation();
 
   const skills = currentSkillsCache[cacheKey];
@@ -208,6 +208,7 @@ async function toggleSkillEnabled(cacheKey, index, currentEnabled) {
 
   if (!skill) return;
 
+  const checkbox = document.querySelector(`[data-index="${cacheKey}-${index}"] input[type="checkbox"]`);
   const groupPath = getGroupPath(cacheKey);
   const fullPath = groupPath ? `${groupPath}/${skill.path}` : skill.path;
   const groupParam = groupPath ? `?group=${encodeURIComponent(groupPath)}` : '';
@@ -220,15 +221,20 @@ async function toggleSkillEnabled(cacheKey, index, currentEnabled) {
 
     if (result.success) {
       skill.enabled = result.enabled;
-      const checkbox = document.querySelector(`[data-index="${cacheKey}-${index}"] input[type="checkbox"]`);
       if (checkbox) {
         checkbox.checked = result.enabled;
       }
       updateCounts(cacheKey);
     } else {
+      if (checkbox) {
+        checkbox.checked = skill.enabled;
+      }
       console.error('Failed to toggle skill:', result.error);
     }
   } catch (e) {
+    if (checkbox) {
+      checkbox.checked = skill.enabled;
+    }
     console.error('Error toggling skill:', e);
   }
 }
